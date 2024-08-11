@@ -3,9 +3,10 @@ package handlers
 
 import (
 	"database/sql"
-	"go_final_project/database"
 	"net/http"
 	"strconv"
+
+	"go_final_project/database"
 )
 
 // DeleteTaskHandler takes request and delete task by ID

@@ -2,8 +2,9 @@
 package tasks
 
 import (
-	"go_final_project/dates"
 	"time"
+
+	"go_final_project/dates"
 )
 
 // GetSearchQuery get search query and provide SQL query for search execution
