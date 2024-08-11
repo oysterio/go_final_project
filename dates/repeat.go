@@ -1,5 +1,5 @@
-// package tasks provides tools for working on scheduler tasks
-package tasks
+// package dates provides date calculations for scheduler
+package dates
 
 import (
 	"errors"
@@ -34,7 +34,7 @@ func dailyPattern(now time.Time, startDate time.Time, repeat string) (string, er
 		nextDate = nextDate.AddDate(0, 0, days)
 	}
 
-	return nextDate.Format("20060102"), nil
+	return nextDate.Format(DateFormat), nil
 }
 
 // yearlyPattern takes repetition rule in "y" pattern, task date and now time and return repetition date of a task such as an error
@@ -45,13 +45,13 @@ func yearlyPattern(now time.Time, startDate time.Time) (string, error) {
 	for now.After(nextDate) || nextDate == now {
 		nextDate = nextDate.AddDate(1, 0, 0)
 	}
-	return nextDate.Format("20060102"), nil
+	return nextDate.Format(DateFormat), nil
 }
 
 // NextDate takes repetition rule, task date as string and now time and return repetition date of a task such as an error
 func NextDate(now time.Time, date string, repeat string) (string, error) {
 	// Parse task date
-	startDate, err := time.Parse("20060102", date)
+	startDate, err := time.Parse(DateFormat, date)
 	if err != nil {
 		log.Printf("Task date is not in valid format: %s", err)
 		return "", err

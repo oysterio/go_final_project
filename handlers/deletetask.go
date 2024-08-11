@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"database/sql"
+	"go_final_project/database"
 	"net/http"
 	"strconv"
 )
@@ -26,23 +27,17 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 	// delete task by ID
-	query := "DELETE FROM scheduler WHERE id = ?"
-	result, err := db.Exec(query, idTaskParsed)
+	errText, err := database.DeleteTask(idTaskParsed, db)
+	errMsg := "DeleteTaskHandler: " + errText
 	if err != nil {
-		SendErrorResponse(w, "DeleteTaskHandler: Error deleting task", http.StatusInternalServerError)
-		return
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		SendErrorResponse(w, "DeleteTaskHandler: Unable to determine the number of affected rows", http.StatusInternalServerError)
-		return
-	} else if rowsAffected == 0 {
-		SendErrorResponse(w, "DeleteTaskHandler: Task not found", http.StatusInternalServerError)
+		SendErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 	// send response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{}`))
+	_, err = w.Write([]byte(`{}`))
+	if err != nil {
+		SendErrorResponse(w, "DeleteTaskHandler: Error sending empty response", http.StatusInternalServerError)
+	}
 }

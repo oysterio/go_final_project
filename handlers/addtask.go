@@ -1,12 +1,16 @@
+// package handlers provides API handlers
 package handlers
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"go_final_project/tasks"
 	"net/http"
 	"time"
+
+	"go_final_project/database"
+	"go_final_project/dates"
+	"go_final_project/tasks"
 )
 
 // AddTaskHandler
@@ -31,11 +35,11 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	if task.Date == "" {
-		task.Date = time.Now().Format("20060102")
+		task.Date = time.Now().Format(dates.DateFormat)
 	}
 
 	// check date format
-	date, err := time.Parse("20060102", task.Date)
+	date, err := time.Parse(dates.DateFormat, task.Date)
 	if err != nil {
 		SendErrorResponse(w, "AddTaskHandler: Invalid date format", http.StatusBadRequest)
 		return
@@ -43,44 +47,26 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	// get task repetition date
 	if task.Repeat != "" {
-		dateCheck, err := tasks.NextDate(time.Now(), task.Date, task.Repeat)
+		dateCheck, err := dates.NextDate(time.Now(), task.Date, task.Repeat)
 		if dateCheck == "" && err != nil {
 			SendErrorResponse(w, "AddTaskHandler: Invalid repeat rule", http.StatusBadRequest)
 			return
 		}
 	}
 
-	now := time.Now()
-	if date.Before(now) {
-		if task.Repeat == "" || date.Truncate(24*time.Hour) == date.Truncate(24*time.Hour) {
-			task.Date = time.Now().Format("20060102")
-		} else {
-			dateStr := date.Format("20060102")
-			nextDate, err := tasks.NextDate(now, dateStr, task.Repeat)
-			if err != nil {
-				SendErrorResponse(w, "AddTaskHandler: Invalid repeat rule", http.StatusBadRequest)
-				return
-			}
-			task.Date = nextDate
-		}
+	task.Date, err = dates.GetTaskRepetitionDate(task.Repeat, date)
+	if err != nil {
+		SendErrorResponse(w, "AddTaskHandler: Invalid repeat rule", http.StatusBadRequest)
+		return
 	}
 
 	// add task
-	query := "INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)"
-
-	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	idTask, errText, err := database.AddTask(&task, db)
 	if err != nil {
-		SendErrorResponse(w, "AddTaskHandler: Error executing db query", http.StatusInternalServerError)
+		SendErrorResponse(w, errText, http.StatusInternalServerError)
 		return
 	}
-
-	// get new task ID
-	id, err := res.LastInsertId()
-	if err != nil {
-		SendErrorResponse(w, "AddTaskHandler: Error getting new task ID", http.StatusInternalServerError)
-		return
-	}
-
+	id := *idTask
 	task.Id = fmt.Sprint(id)
 
 	taskId := map[string]interface{}{"id": id}
@@ -91,5 +77,8 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 	// send response
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		SendErrorResponse(w, "AddTaskHandler: Error sending response", http.StatusInternalServerError)
+	}
 }

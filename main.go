@@ -8,11 +8,12 @@ import (
 	"os"
 	"strconv"
 
-	"go_final_project/database"
-	"go_final_project/handlers"
-
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
+
+	"go_final_project/database"
+	dateHandler "go_final_project/dates/handlers"
+	"go_final_project/handlers"
 )
 
 // init loads enviroment variables
@@ -64,7 +65,7 @@ func main() {
 	r.Handle("/*", fileServer(webDir))
 	log.Printf("Loaded frontend files from %s\n", webDir)
 
-	r.Get("/api/nextdate", handlers.GetNextDate)
+	r.Get("/api/nextdate", dateHandler.GetNextDate)
 	r.Post("/api/task", func(w http.ResponseWriter, r *http.Request) {
 		handlers.AddTaskHandler(w, r, db)
 	})

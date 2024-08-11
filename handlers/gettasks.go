@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"go_final_project/tasks"
 	"net/http"
-	"sort"
-	"time"
+
+	"go_final_project/tasks"
 )
+
+const taskLimit = 50
 
 type TasksResponse struct {
 	Tasks []tasks.Task `json:"tasks"`
@@ -21,7 +22,6 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		SendErrorResponse(w, "GetTasksHandler: Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	const taskLimit = 50
 	var taskList []tasks.Task
 	var task tasks.Task
 	var rows *sql.Rows
@@ -29,29 +29,13 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	searchStr := r.FormValue("search")
 	// get tasks with search query provided
 	if searchStr != "" {
-		var searchDate time.Time
-		searchDate, err = time.Parse("02.01.2006", searchStr)
-		if err == nil {
-			// get tasks by date
-			searchDateFormatted := searchDate.Format("20060102")
-			query := "SELECT id, date, title, comment, repeat FROM scheduler WHERE date = $1 ORDER BY date LIMIT $2"
-			rows, err = db.Query(query, searchDateFormatted, taskLimit)
-			if err != nil {
-				SendErrorResponse(w, "GetTasksHandler: Error executing db query", http.StatusInternalServerError)
-				return
-			}
-			defer rows.Close()
-		} else {
-			// get tasks by title/comment
-			searchContain := "%" + searchStr + "%"
-			query := "SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE $1 OR comment LIKE $1 ORDER BY date LIMIT $2"
-			rows, err = db.Query(query, searchContain, taskLimit)
-			if err != nil {
-				SendErrorResponse(w, "GetTasksHandler: Error executing db query", http.StatusInternalServerError)
-				return
-			}
-			defer rows.Close()
+		searchParam, query := tasks.GetSearchQuery(searchStr)
+		rows, err := db.Query(query, searchParam, taskLimit)
+		if err != nil {
+			SendErrorResponse(w, "GetTasksHandler: Error executing db query", http.StatusInternalServerError)
+			return
 		}
+		defer rows.Close()
 	} else {
 		// get tasks w/o condition
 		query := "SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT $1"
@@ -62,6 +46,7 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 		defer rows.Close()
 	}
+
 	// scan provided tasks
 	if err := rows.Err(); err != nil {
 		SendErrorResponse(w, "GetTasksHandler: Failed to iterate over rows", http.StatusInternalServerError)
@@ -84,9 +69,8 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	// sort tasks
-	sort.Slice(taskList, func(i, j int) bool {
-		return taskList[i].Date < taskList[j].Date
-	})
+	tasks.SortTaskSlice(taskList)
+
 	// get JSON response
 	responseMap := map[string][]tasks.Task{"tasks": taskList}
 	response, err := json.Marshal(responseMap)
@@ -98,5 +82,8 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// send response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		SendErrorResponse(w, "GetTasksHandler: Error sending response", http.StatusInternalServerError)
+	}
 }

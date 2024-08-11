@@ -1,13 +1,14 @@
-// package handlers provides API handlers
-package handlers
+// package dates provides date calculations for scheduler
+package dateHandler
 
 import (
 	"errors"
 	"fmt"
-	"go_final_project/tasks"
 	"log"
 	"net/http"
 	"time"
+
+	"go_final_project/dates"
 )
 
 // GetNextDate takes request and calculate new repetition date for task
@@ -22,7 +23,7 @@ func GetNextDate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now, err := time.Parse("20060102", nowStr)
+	now, err := time.Parse(dates.DateFormat, nowStr)
 	if err != nil {
 		log.Printf("Invalid 'now' date format: %v", err)
 		http.Error(w, fmt.Sprintf("Invalid 'now' date format: %v", err), http.StatusBadRequest)
@@ -32,7 +33,7 @@ func GetNextDate(w http.ResponseWriter, r *http.Request) {
 	date := r.FormValue("date")
 	repeat := r.FormValue("repeat")
 
-	result, err := tasks.NextDate(now, date, repeat)
+	result, err := dates.NextDate(now, date, repeat)
 	if err != nil {
 		log.Printf("Error calculating next date: %v", err)
 		http.Error(w, fmt.Sprintf("Error calculating next date: %v", err), http.StatusInternalServerError)

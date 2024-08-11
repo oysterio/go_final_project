@@ -4,57 +4,14 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"go_final_project/tasks"
 	"net/http"
 	"strconv"
 	"time"
+
+	"go_final_project/database"
+	"go_final_project/dates"
+	"go_final_project/tasks"
 )
-
-// GetTaskByID takes request and get task by ID
-func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method != http.MethodGet {
-		SendErrorResponse(w, "GetTaskByID: Method not allowed", http.StatusBadRequest)
-		return
-	}
-
-	// get task ID
-	idTask := r.FormValue("id")
-	if idTask == "" {
-		SendErrorResponse(w, "GetTaskByID: No ID provided", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idTask)
-	if err != nil {
-		SendErrorResponse(w, "GetTaskByID: Invalid ID format", http.StatusBadRequest)
-		return
-	}
-
-	var task tasks.Task
-
-	// get task by ID
-	query := "SELECT id, date, title, comment, repeat FROM scheduler WHERE id = ?"
-	err = db.QueryRow(query, id).Scan(&task.Id, &task.Date, &task.Title, &task.Comment, &task.Repeat)
-	if err == sql.ErrNoRows {
-		SendErrorResponse(w, "GetTaskByID: Task not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		SendErrorResponse(w, "GetTaskByID: Error executing db query", http.StatusInternalServerError)
-		return
-	}
-
-	// get JSON response
-	response, err := json.Marshal(task)
-	if err != nil {
-		SendErrorResponse(w, "GetTaskByID: response JSON creation eror", http.StatusInternalServerError)
-		return
-	}
-
-	// send response
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(response)
-}
 
 // EditTaskHandler takes request and edit task by ID
 func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -90,11 +47,11 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	if task.Date == "" {
-		task.Date = time.Now().Format("20060102")
+		task.Date = time.Now().Format(dates.DateFormat)
 	}
 
 	// parse task Date
-	_, err = time.Parse("20060102", task.Date)
+	_, err = time.Parse(dates.DateFormat, task.Date)
 	if err != nil {
 		SendErrorResponse(w, "EditTaskHandler: Invalid date format", http.StatusBadRequest)
 		return
@@ -109,22 +66,16 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	// check task existence
-	var idTask int
-	err = db.QueryRow("SELECT id FROM scheduler WHERE id = ?", task.Id).Scan(&idTask)
-	if err == sql.ErrNoRows {
-		SendErrorResponse(w, "EditTaskHandler: Task not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		SendErrorResponse(w, "EditTaskHandler: Error checking task existence", http.StatusInternalServerError)
+	errText, statusCode, err := database.CheckTaskExistence(task.Id, db)
+	if err != nil {
+		SendErrorResponse(w, errText, statusCode)
 		return
 	}
-
 	// update task
-	query := "UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat =? WHERE id = ?"
-
-	_, err = db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.Id)
+	errText, err = database.EditTask(&task, db)
+	errMsg := "EditTaskHandler: " + errText
 	if err != nil {
-		SendErrorResponse(w, "EditTaskHandler: Task not found", http.StatusInternalServerError)
+		SendErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -136,5 +87,8 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 	// send response
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		SendErrorResponse(w, "EditTaskHandler: Error sending response", http.StatusInternalServerError)
+	}
 }
