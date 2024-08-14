@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go_final_project/constants"
 )
 
 // dailyPattern takes repetition rule in "d" format, task date and now time and return repetition date of a task such as an error
@@ -34,7 +36,7 @@ func dailyPattern(now time.Time, startDate time.Time, repeat string) (string, er
 		nextDate = nextDate.AddDate(0, 0, days)
 	}
 
-	return nextDate.Format(DateFormat), nil
+	return nextDate.Format(constants.DateFormat), nil
 }
 
 // yearlyPattern takes repetition rule in "y" pattern, task date and now time and return repetition date of a task such as an error
@@ -45,13 +47,13 @@ func yearlyPattern(now time.Time, startDate time.Time) (string, error) {
 	for now.After(nextDate) || nextDate == now {
 		nextDate = nextDate.AddDate(1, 0, 0)
 	}
-	return nextDate.Format(DateFormat), nil
+	return nextDate.Format(constants.DateFormat), nil
 }
 
 // NextDate takes repetition rule, task date as string and now time and return repetition date of a task such as an error
 func NextDate(now time.Time, date string, repeat string) (string, error) {
 	// Parse task date
-	startDate, err := time.Parse(DateFormat, date)
+	startDate, err := time.Parse(constants.DateFormat, date)
 	if err != nil {
 		log.Printf("Task date is not in valid format: %s", err)
 		return "", err

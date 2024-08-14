@@ -2,19 +2,19 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
+	"go_final_project/constants"
 	"go_final_project/database"
-	"go_final_project/dates"
 	"go_final_project/tasks"
 )
 
 // EditTaskHandler takes request and edit task by ID
-func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Database) {
 	if r.Method != http.MethodPut {
 		SendErrorResponse(w, "EditTaskHandler: Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -47,11 +47,11 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	if task.Date == "" {
-		task.Date = time.Now().Format(dates.DateFormat)
+		task.Date = time.Now().Format(constants.DateFormat)
 	}
 
 	// parse task Date
-	_, err = time.Parse(dates.DateFormat, task.Date)
+	_, err = time.Parse(constants.DateFormat, task.Date)
 	if err != nil {
 		SendErrorResponse(w, "EditTaskHandler: Invalid date format", http.StatusBadRequest)
 		return
@@ -66,16 +66,15 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	// check task existence
-	errText, statusCode, err := database.CheckTaskExistence(task.Id, db)
+	_, statusCode, err := db.GetTaskByID(id)
 	if err != nil {
-		SendErrorResponse(w, errText, statusCode)
+		SendErrorResponse(w, fmt.Sprintf("EditTaskHandler: failed to check task existence: %v", err), statusCode)
 		return
 	}
 	// update task
-	errText, err = database.EditTask(&task, db)
-	errMsg := "EditTaskHandler: " + errText
+	err = db.EditTask(task)
 	if err != nil {
-		SendErrorResponse(w, errMsg, http.StatusInternalServerError)
+		SendErrorResponse(w, fmt.Errorf("EditTaskHandler: failed to update task: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 

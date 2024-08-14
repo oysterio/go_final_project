@@ -1,24 +1,26 @@
 package database
 
 import (
-	"database/sql"
+	"errors"
+	"fmt"
 )
 
-func DeleteTask(id int, db *sql.DB) (errText string, err error) {
+func (d *Database) DeleteTask(id int) error {
 	query := "DELETE FROM scheduler WHERE id = ?"
-	result, err := db.Exec(query, id)
+
+	res, err := d.db.Exec(query, id)
 	if err != nil {
-		errText = "Error deleting task"
-		return errText, err
+		return fmt.Errorf("failed to delete task: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		errText = "Unable to determine the number of affected rows"
-		return errText, err
-	} else if rowsAffected == 0 {
-		errText = "Task not found"
-		return errText, err
+	var rowsAffected int64
+	if rowsAffected, err = res.RowsAffected(); err != nil {
+		return fmt.Errorf("failed to determine number of affected rows: %w", err)
 	}
-	return "", nil
+
+	if rowsAffected == 0 {
+		return errors.New("task not found")
+	}
+
+	return nil
 }

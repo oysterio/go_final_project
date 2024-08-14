@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"time"
 
+	"go_final_project/constants"
 	"go_final_project/dates"
 )
 
 // GetNextDate takes request and calculate new repetition date for task
 func GetNextDate(w http.ResponseWriter, r *http.Request) {
-	log.Println("Received request GetNextDate")
 
 	nowStr := r.FormValue("now")
 	if nowStr == "" {
@@ -23,7 +23,7 @@ func GetNextDate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now, err := time.Parse(dates.DateFormat, nowStr)
+	now, err := time.Parse(constants.DateFormat, nowStr)
 	if err != nil {
 		log.Printf("Invalid 'now' date format: %v", err)
 		http.Error(w, fmt.Sprintf("Invalid 'now' date format: %v", err), http.StatusBadRequest)

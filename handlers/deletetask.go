@@ -2,7 +2,7 @@
 package handlers
 
 import (
-	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,9 +10,9 @@ import (
 )
 
 // DeleteTaskHandler takes request and delete task by ID
-func DeleteTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func DeleteTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Database) {
 	if r.Method != http.MethodDelete {
-		SendErrorResponse(w, "DeleteTaskHandler: Method not allowed", http.StatusBadRequest)
+		SendErrorResponse(w, "DeleteTaskHandler: Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -24,16 +24,16 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	idTaskParsed, err := strconv.Atoi(idTask)
 	if err != nil {
-		SendErrorResponse(w, "DeleteTaskHandler: Invalid ID format", http.StatusInternalServerError)
+		SendErrorResponse(w, "DeleteTaskHandler: Invalid ID format", http.StatusBadRequest)
 		return
 	}
 	// delete task by ID
-	errText, err := database.DeleteTask(idTaskParsed, db)
-	errMsg := "DeleteTaskHandler: " + errText
+	err = db.DeleteTask(idTaskParsed)
 	if err != nil {
-		SendErrorResponse(w, errMsg, http.StatusInternalServerError)
+		SendErrorResponse(w, fmt.Errorf("DeleteTaskHandler: failed to delete task: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
+
 	// send response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

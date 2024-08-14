@@ -31,9 +31,9 @@ func fileServer(path string) http.Handler {
 
 func main() {
 
-	db, err := database.SetupDatabase()
+	db, err := database.NewDatabase()
 	if err != nil {
-		log.Fatalf("Failed to set up database: %v", err)
+		log.Fatalf("failed to set up database: %v", err)
 	}
 	defer func() {
 		if err := db.Close(); err != nil {

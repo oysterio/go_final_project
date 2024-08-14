@@ -2,8 +2,8 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -12,9 +12,9 @@ import (
 )
 
 // GetTaskByID takes request and get task by ID
-func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *database.Database) {
 	if r.Method != http.MethodGet {
-		SendErrorResponse(w, "GetTaskByIDHandler: Method not allowed", http.StatusBadRequest)
+		SendErrorResponse(w, "GetTaskByIDHandler: Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -34,10 +34,9 @@ func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var task tasks.Task
 
 	// get task by ID
-	errText, statusCode, err := database.GetTaskByID(id, &task, db)
-	errMsg := "GetTaskByIDHandler: " + errText
+	task, statusCode, err := db.GetTaskByID(id)
 	if err != nil {
-		SendErrorResponse(w, errMsg, statusCode)
+		SendErrorResponse(w, fmt.Errorf("GetTaskByIDHandler: failed to get task: %w", err).Error(), statusCode)
 		return
 	}
 

@@ -1,27 +1,26 @@
 package database
 
 import (
-	"database/sql"
+	"fmt"
 
 	"go_final_project/tasks"
 )
 
-func AddTask(task *tasks.Task, db *sql.DB) (id *int64, errText string, err error) {
-	var idTask int64
-	query := "INSERT INTO scheduler (date, title, comment, repeat) VALUES (?, ?, ?, ?)"
+func (d *Database) AddTask(t tasks.Task) (int, error) {
+	query := `INSERT INTO scheduler (date, title, comment, repeat)
+			 VALUES (?, ?, ?, ?)`
 
-	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	// Выполнение запроса на добавление записи в таблицу
+	res, err := d.db.Exec(query, t.Date, t.Title, t.Comment, t.Repeat)
 	if err != nil {
-		errText = "AddTaskHandler: Error executing db query"
-		return nil, errText, err
+		return 0, fmt.Errorf("failed to add task: %w", err)
 	}
 
-	// get new task ID
-	idTask, err = res.LastInsertId()
+	// Получение идентификатора добавленной записи
+	id, err := res.LastInsertId()
 	if err != nil {
-		errText = "AddTaskHandler: Error executing db query"
-		return nil, errText, err
+		return 0, fmt.Errorf("failed to retrieve task ID: %w", err)
 	}
-	id = &idTask
-	return id, "", nil
+
+	return int(id), nil
 }

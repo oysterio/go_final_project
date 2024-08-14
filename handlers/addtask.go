@@ -2,19 +2,19 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"go_final_project/constants"
 	"go_final_project/database"
 	"go_final_project/dates"
 	"go_final_project/tasks"
 )
 
 // AddTaskHandler
-func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Database) {
 	if r.Method != http.MethodPost {
 		SendErrorResponse(w, "AddTaskHandler: Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -35,11 +35,11 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	if task.Date == "" {
-		task.Date = time.Now().Format(dates.DateFormat)
+		task.Date = time.Now().Format(constants.DateFormat)
 	}
 
 	// check date format
-	date, err := time.Parse(dates.DateFormat, task.Date)
+	date, err := time.Parse(constants.DateFormat, task.Date)
 	if err != nil {
 		SendErrorResponse(w, "AddTaskHandler: Invalid date format", http.StatusBadRequest)
 		return
@@ -61,15 +61,14 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	// add task
-	idTask, errText, err := database.AddTask(&task, db)
+	idTask, err := db.AddTask(task)
 	if err != nil {
-		SendErrorResponse(w, errText, http.StatusInternalServerError)
+		SendErrorResponse(w, fmt.Errorf("AddTaskHandler: failed to add task: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
-	id := *idTask
-	task.Id = fmt.Sprint(id)
+	task.Id = fmt.Sprint(idTask)
 
-	taskId := map[string]interface{}{"id": id}
+	taskId := map[string]interface{}{"id": task.Id}
 	response, err := json.Marshal(taskId)
 	if err != nil {
 		SendErrorResponse(w, "AddTaskHandler: response JSON creation  error", http.StatusInternalServerError)
