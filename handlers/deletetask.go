@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -39,6 +40,6 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Data
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(`{}`))
 	if err != nil {
-		SendErrorResponse(w, "DeleteTaskHandler: Error sending empty response", http.StatusInternalServerError)
+		log.Printf("DeleteTaskHandler: failed to write response: %v", err)
 	}
 }

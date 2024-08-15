@@ -1,5 +1,5 @@
-// package dates provides date calculations for scheduler
-package dateHandler
+// package handlers provides API handlers
+package handlers
 
 import (
 	"errors"

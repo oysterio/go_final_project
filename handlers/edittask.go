@@ -2,8 +2,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -66,9 +68,12 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Databa
 	}
 
 	// check task existence
-	_, statusCode, err := db.GetTaskByID(id)
-	if err != nil {
-		SendErrorResponse(w, fmt.Sprintf("EditTaskHandler: failed to check task existence: %v", err), statusCode)
+	_, err = db.GetTaskByID(id)
+	if err == sql.ErrNoRows {
+		SendErrorResponse(w, fmt.Errorf("EditTaskHandler: failed to find task: %w", err).Error(), http.StatusNotFound)
+		return
+	} else if err != nil {
+		SendErrorResponse(w, fmt.Errorf("EditTaskHandler: failed to check task existence: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 	// update task
@@ -88,6 +93,6 @@ func EditTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Databa
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(response)
 	if err != nil {
-		SendErrorResponse(w, "EditTaskHandler: Error sending response", http.StatusInternalServerError)
+		log.Printf("EditTaskHandler: failed to write response: %v", err)
 	}
 }

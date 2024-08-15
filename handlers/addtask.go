@@ -4,6 +4,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -78,6 +79,6 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Databas
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(response)
 	if err != nil {
-		SendErrorResponse(w, "AddTaskHandler: Error sending response", http.StatusInternalServerError)
+		log.Printf("AddTaskHandler: failed to write response: %v", err)
 	}
 }

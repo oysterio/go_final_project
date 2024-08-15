@@ -2,8 +2,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -34,9 +36,12 @@ func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *database.Dat
 	var task tasks.Task
 
 	// get task by ID
-	task, statusCode, err := db.GetTaskByID(id)
-	if err != nil {
-		SendErrorResponse(w, fmt.Errorf("GetTaskByIDHandler: failed to get task: %w", err).Error(), statusCode)
+	task, err = db.GetTaskByID(id)
+	if err == sql.ErrNoRows {
+		SendErrorResponse(w, fmt.Errorf("GetTaskByIDHandler: failed to find task: %w", err).Error(), http.StatusNotFound)
+		return
+	} else if err != nil {
+		SendErrorResponse(w, fmt.Errorf("GetTaskByIDHandler: failed to retrieve task: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -52,6 +57,6 @@ func GetTaskByIDHandler(w http.ResponseWriter, r *http.Request, db *database.Dat
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(response)
 	if err != nil {
-		SendErrorResponse(w, "GetTaskByIDHandler: Error sending response", http.StatusInternalServerError)
+		log.Printf("GetTaskByIDHandler: failed to write response: %v", err)
 	}
 }

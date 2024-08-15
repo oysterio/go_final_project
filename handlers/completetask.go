@@ -2,7 +2,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,9 +34,12 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Databa
 	}
 
 	var task tasks.Task
-	task, statusCode, err := db.GetTaskByID(idTaskParsed)
-	if err != nil {
-		SendErrorResponse(w, fmt.Errorf("DoneTaskHandler: failed to get task: %w", err).Error(), statusCode)
+	task, err = db.GetTaskByID(idTaskParsed)
+	if err == sql.ErrNoRows {
+		SendErrorResponse(w, fmt.Errorf("DoneTaskHandler: failed to find task: %w", err).Error(), http.StatusNotFound)
+		return
+	} else if err != nil {
+		SendErrorResponse(w, fmt.Errorf("DoneTaskHandler: failed to retrieve task: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -69,6 +74,6 @@ func DoneTaskHandler(w http.ResponseWriter, r *http.Request, db *database.Databa
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(`{}`))
 	if err != nil {
-		SendErrorResponse(w, "DoneTaskHandler: Error sending empty response", http.StatusInternalServerError)
+		log.Printf("DoneTaskHandler: failed to write response: %v", err)
 	}
 }

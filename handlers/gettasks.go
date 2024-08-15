@@ -4,6 +4,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"go_final_project/database"
@@ -48,6 +49,6 @@ func GetTasksHandler(w http.ResponseWriter, r *http.Request, db *database.Databa
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(response)
 	if err != nil {
-		SendErrorResponse(w, "GetTasksHandler: Error sending response", http.StatusInternalServerError)
+		log.Printf("GetTasksHandler: failed to write response: %v", err)
 	}
 }

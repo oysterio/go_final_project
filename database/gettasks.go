@@ -4,11 +4,14 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"go_final_project/constants"
 	"go_final_project/tasks"
 )
+
+const TaskLimit = 50
 
 // GetSearchQuery get search query and provide SQL query for search execution
 func (d Database) GetTasks(searchStr string) (taskList []tasks.Task, err error) {
@@ -18,40 +21,36 @@ func (d Database) GetTasks(searchStr string) (taskList []tasks.Task, err error) 
 	var query string
 	var rows *sql.Rows
 
+	log.Printf("searchStr:%v", searchStr)
+	searchDate, err := time.Parse("02.01.2006", searchStr)
 	switch {
-	case searchStr != "":
-		searchDate, err := time.Parse("02.01.2006", searchStr)
-		if err == nil {
-			// get tasks by date
-			searchParam = searchDate.Format(constants.DateFormat)
-			query = "SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?"
-			rows, err = d.db.Query(query, searchParam, constants.TaskLimit)
-			if err != nil {
-				return taskList, fmt.Errorf("failed to get task by date: %w", err)
-			}
-		} else {
-			// get tasks by title/comment
-			searchParam = "%" + searchStr + "%"
-			query = "SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE $1 OR comment LIKE $1 ORDER BY date LIMIT $2"
-			rows, err = d.db.Query(query, searchParam, constants.TaskLimit)
-			if err != nil {
-				return taskList, fmt.Errorf("failed to get task by content: %w", err)
-			}
+	case searchStr != "" && err == nil:
+		// get tasks by date
+		log.Println("searchDate")
+		searchParam = searchDate.Format(constants.DateFormat)
+		log.Printf("searchParam:%v", searchParam)
+		query = "SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?"
+		rows, err = d.db.Query(query, searchParam, TaskLimit)
+		if err != nil {
+			return taskList, fmt.Errorf("failed to get task by date: %w", err)
 		}
-		defer rows.Close()
+	case searchStr != "" && err != nil:
+		// get tasks by title/comment
+		searchParam = "%" + searchStr + "%"
+		query = "SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?"
+		rows, err = d.db.Query(query, searchParam, searchParam, TaskLimit)
+		if err != nil {
+			return taskList, fmt.Errorf("failed to get task by content: %w", err)
+		}
 	default:
 		// get tasks w/o condition
-		query := "SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?"
-		rows, err = d.db.Query(query, constants.TaskLimit)
+		query = "SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date LIMIT ?"
+		rows, err = d.db.Query(query, TaskLimit)
 		if err != nil {
 			return taskList, fmt.Errorf("failed to get tasks: %w", err)
 		}
-		defer rows.Close()
 	}
-
-	if err = rows.Err(); err != nil {
-		return taskList, fmt.Errorf("failed to iterate over rows: %w", err)
-	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var id int64
@@ -60,6 +59,14 @@ func (d Database) GetTasks(searchStr string) (taskList []tasks.Task, err error) 
 		}
 		t.Id = fmt.Sprint(id)
 		taskList = append(taskList, t)
+		log.Printf("Task: %v, %v", t.Title, t.Date)
+		log.Printf("TaskList: %v", taskList)
 	}
+
+	if err = rows.Err(); err != nil {
+		return taskList, fmt.Errorf("failed to iterate over rows: %w", err)
+	}
+
+	log.Printf("TaskList 2: %v", taskList)
 	return taskList, nil
 }
